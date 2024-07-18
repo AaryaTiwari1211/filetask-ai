@@ -107,9 +107,10 @@ const Sidebar = () => {
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) {
+    if (!user.user) {
       router.push("/login");
-    } else {
+    } 
+    else {
       console.log("User is logged in");
       console.log(user);
       // console.log(user.user.emailAddresses[0].emailAddress);
