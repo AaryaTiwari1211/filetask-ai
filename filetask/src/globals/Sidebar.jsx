@@ -187,16 +187,41 @@ const Sidebar = () => {
             <MenuIcon size={40} className="text-white m-2" />
           </SheetTrigger>
           <SheetContent className="bg-bg border-none">
-            <ProfileButton />
-            <div className="my-5">
-              <h2 className="text-lg text-white font-primary">Chats</h2>
-              {chats.slice(0, 5).map((chat) => (
-                <ChatCard
-                  key={chat.title}
-                  icon={chat.icon}
-                  title={chat.title}
+            <SignedIn>
+              <ProfileCard
+                name={user?.user?.fullName}
+                email={user?.user?.emailAddresses[0]?.emailAddress}
+                pfp={user?.user?.imageUrl}
+              />
+            </SignedIn>
+            <SignedOut>
+              <div className="flex justify-between gap-2">
+                <CustomButton
+                  icon={<User size={24} />}
+                  text="Sign In"
+                  onClick={() => router.push("/login")}
                 />
-              ))}
+                <CustomButton
+                  icon={<User size={24} />}
+                  text="Sign Up"
+                  onClick={() => router.push("/signup")}
+                />
+              </div>
+            </SignedOut>
+            <div className="my-5">
+              <SignedIn>
+                <h2 className="text-lg text-white font-primary">Chats</h2>
+                {chats.slice(0, 5).map((chat) => (
+                  <ChatCard
+                    key={chat.title}
+                    icon={chat.icon}
+                    title={chat.title}
+                  />
+                ))}
+              </SignedIn>
+              <SignedOut>
+                <p className="text-lg">Log in to view chats</p>
+              </SignedOut>
             </div>
             <Separator className="my-4 bg-light-bg p-px" />
             <div className="my-5">
