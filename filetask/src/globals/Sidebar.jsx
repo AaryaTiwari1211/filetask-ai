@@ -11,6 +11,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+
 import { useEffect, useState } from "react";
 import { SignedIn, SignedOut, SignOutButton, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
@@ -86,7 +87,7 @@ const chats = [
   },
 ];
 
-export const CustomButton = ({icon , text , onClick , className}) => {
+export const CustomButton = ({ icon, text, onClick, className }) => {
   return (
     <Button
       className={`bg-secondary text-white my-5 text-lg py-5 flex gap-2 items-center justify-start hover:bg-green-700 ${className}`}
@@ -98,7 +99,7 @@ export const CustomButton = ({icon , text , onClick , className}) => {
       <p className="text-[16px] tracking-wide">{text}</p>
     </Button>
   );
-}
+};
 
 const Sidebar = () => {
   const isMobile = useMediaQuery("(max-width: 960px)");
@@ -115,7 +116,6 @@ const Sidebar = () => {
     }
   });
 
-
   return (
     <>
       {!isMobile ? (
@@ -129,17 +129,37 @@ const Sidebar = () => {
           </SignedIn>
           <SignedOut>
             <div className="flex justify-between gap-2">
-              <CustomButton icon={<User size={24} />} text="Sign In" onClick={() => router.push("/login")} />
-              <CustomButton icon={<User size={24} />} text="Sign Up" onClick={() => router.push("/signup")} />
+              <CustomButton
+                icon={<User size={24} />}
+                text="Sign In"
+                onClick={() => router.push("/login")}
+              />
+              <CustomButton
+                icon={<User size={24} />}
+                text="Sign Up"
+                onClick={() => router.push("/signup")}
+              />
             </div>
           </SignedOut>
-          <CustomButton icon={<PlusCircleIcon size={24} />} text="Create New Chat" />
-          <div className="my-5">
-            <h2 className="text-lg text-white font-primary">Chats</h2>
-            {chats.slice(0, 5).map((chat) => (
-              <ChatCard key={chat.title} icon={chat.icon} title={chat.title} />
-            ))}
-          </div>
+          <CustomButton
+            icon={<PlusCircleIcon size={24} />}
+            text="Create New Chat"
+          />
+          <SignedIn>
+            <div className="my-5">
+              <h2 className="text-lg text-white font-primary">Chats</h2>
+              {chats.slice(0, 5).map((chat) => (
+                <ChatCard
+                  key={chat.title}
+                  icon={chat.icon}
+                  title={chat.title}
+                />
+              ))}
+            </div>
+          </SignedIn>
+          <SignedOut>
+            <p className="text-lg">Log in to view chats</p>
+          </SignedOut>
           <Separator className="my-4 bg-light-bg p-px" />
           <div className="my-5">
             <h2 className="text-lg text-white font-primary">Options</h2>
@@ -152,7 +172,11 @@ const Sidebar = () => {
             ))}
             <SignedIn>
               <SignOutButton>
-                <CustomButton icon={<User size={24} />} text="Sign Out" />
+                <CustomButton
+                  icon={<User size={24} />}
+                  text="Sign Out"
+                  className="w-full bg-red-500 hover:bg-red-700"
+                />
               </SignOutButton>
             </SignedIn>
           </div>
