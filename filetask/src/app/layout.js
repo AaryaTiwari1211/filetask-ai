@@ -28,11 +28,7 @@ export default function RootLayout({ children }) {
     >
       <html lang="en">
         <body className={`p-0 m-0 flex`}>
-          {(router.pathname === "/login") ||
-          (router.pathname === "/signup") ? null : (
-            <Sidebar />
-          )}
-
+          <Sidebar />
           <div className="w-full">{children}</div>
         </body>
       </html>

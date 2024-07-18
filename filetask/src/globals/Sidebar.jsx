@@ -107,10 +107,7 @@ const Sidebar = () => {
   const router = useRouter();
 
   useEffect(() => {
-    if (!user.user) {
-      router.push("/login");
-    } 
-    else {
+    if (user.user) {
       console.log("User is logged in");
       console.log(user);
       // console.log(user.user.emailAddresses[0].emailAddress);
@@ -221,7 +218,7 @@ const Sidebar = () => {
                 ))}
               </SignedIn>
               <SignedOut>
-                <p className="text-lg">Log in to view chats</p>
+                <p className="text-lg text-white">Log in to view chats</p>
               </SignedOut>
             </div>
             <Separator className="my-4 bg-light-bg p-px" />
