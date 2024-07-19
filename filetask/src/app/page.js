@@ -59,7 +59,7 @@ export const Main = () => {
   const [response, setResponse] = useState("");
   const [loading, setLoading] = useState(false);
 
-  
+
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     setFile(file);
@@ -86,70 +86,6 @@ export const Main = () => {
   const getFileExtension = (filename) => {
     return filename?.split(".").pop().toLowerCase();
   };
-
-  const extractTextFromFile = async (file) => {
-    const ext = getFileExtension(file.name);
-    let text = "";
-    if (ext === "pdf") {
-      const data = await pdf(file);
-      text = data.text;
-    } else if (ext === "docx") {
-      const arrayBuffer = await file.arrayBuffer();
-      const result = await mammoth.extractRawText({ arrayBuffer });
-      text = result.value;
-    } else if (ext === "pptx") {
-      const pptx = new PptxGenJS();
-      await pptx.load(file);
-      for (let slide of pptx.slides) {
-        for (let shape of slide.shapes) {
-          if (shape.text) {
-            text += shape.text + " ";
-          }
-        }
-      }
-    }
-    return text;
-  };
-
-  const handleQuestionSubmit = async () => {
-    if (!file || !question) {
-      toast({
-        title: "Error",
-        description: "Please upload a file and ask a question.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const result = await model.generateContent({
-        contents: [
-          { role: "user", parts: [{ type: "text", content: fileContent }] },
-        ],
-        generationConfig,
-        safetySettings,
-      });
-      console.log(result);
-      setResponse(result.response.text());
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "An error occurred while processing the file.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (file) {
-      const content = extractTextFromFile(file);
-      setFileContent(content);
-    }
-  }, [file]);
 
   return (
     <div className="w-full h-full flex">
