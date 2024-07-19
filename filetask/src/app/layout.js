@@ -26,7 +26,7 @@ export default function RootLayout({ children }) {
         },
       }}
     >
-      <html lang="en">
+      <html lang="en" className="m-0 p-0">
         <body className={`p-0 m-0 flex`}>
           <Sidebar />
           <div className="w-full">{children}</div>
