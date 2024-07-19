@@ -16,11 +16,11 @@ import { useEffect, useState } from "react";
 import { SignedIn, SignedOut, SignOutButton, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { createChat } from "@/firebase/utils";
+import { createChat, uploadDocument } from "@/firebase/utils";
 
 export const useMediaQuery = (query) => {
   const [matches, setMatches] = useState(false);
-
+ 
   useEffect(() => {
     const media = window.matchMedia(query);
     if (media.matches !== matches) {
@@ -89,6 +89,7 @@ const chats = [
 ];
 
 export const CustomButton = ({ icon, text, onClick, className }) => {
+  
   return (
     <Button
       className={`bg-secondary text-white my-5 text-lg py-5 flex gap-2 items-center justify-start hover:bg-green-700 ${className}`}
@@ -106,7 +107,8 @@ const Sidebar = () => {
   const isMobile = useMediaQuery("(max-width: 960px)");
   const user = useUser();
   const router = useRouter();
-
+  const [file, setFile] = useState(null);
+  
   useEffect(() => {
     if (user.user) {
       console.log("User is logged in");
@@ -115,19 +117,38 @@ const Sidebar = () => {
     }
   });
 
-  const handleCreateNewChat = async () => {
-    if (user.user) {
-      try {
-        const newChatRef = await createChat(user.user.id, 'New Chat');
-        router.push(`/chats/${newChatRef.id}`);
-      } catch (error) {
-        console.error("Error creating new chat:", error);
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    setFile(file);
+    
+    if (!file) {
+      console.error("No file selected");
+      return;
+    }
+  
+    if (!user.user) {
+      console.error("User not logged in");
+      return;
+    }
+  
+    try {
+      console.log("Attempting to create chat...");
+      const newChatRef = await createChat(user.user.id, file.name);
+      
+      console.log("Attempting to upload document...");
+      const downloadURL = await uploadDocument(file, newChatRef.id);
+      router.push(`/chats/${newChatRef.id}`);
+    } catch (error) {
+      console.error("Error in handleFileUpload:", error);
+      if (error.code) {
+        console.error("Error code:", error.code);
       }
-    } else {
-      // Handle case when user is not logged in
-      console.log("Please log in to create a new chat");
+      if (error.message) {
+        console.error("Error message:", error.message);
+      }
     }
   };
+
 
   return (
     <>
@@ -154,11 +175,20 @@ const Sidebar = () => {
               />
             </div>
           </SignedOut>
-          <CustomButton
-            icon={<PlusCircleIcon size={24} />}
-            text="Create New Chat"
-            onClick={handleCreateNewChat}
-          />
+          <label
+            htmlFor="create-chat-file"
+            className="bg-secondary text-white my-5 text-lg py-5 flex gap-2 items-center justify-start hover:bg-green-700 cursor-pointer rounded-md px-4"
+          >
+            <PlusCircleIcon size={24} />
+            <span className="text-[16px] tracking-wide">Create New Chat</span>
+            <input
+              type="file"
+              id="create-chat-file"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+          </label>
+
           <SignedIn>
             <div className="my-5">
               <h2 className="text-lg text-white font-primary">Chats</h2>
