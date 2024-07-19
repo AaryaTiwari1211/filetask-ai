@@ -7,6 +7,7 @@ import Footer from "../globals/Footer";
 import { ClerkProvider } from "@clerk/nextjs";
 import { dark, neobrutalism, shadesOfPurple } from "@clerk/themes";
 import { useRouter } from "next/navigation";
+import { Toaster } from "@/components/ui/toaster";
 
 // export const metadata = {
 //   title: "Create Next App",
@@ -30,6 +31,7 @@ export default function RootLayout({ children }) {
         <body className={`p-0 m-0 flex`}>
           <Sidebar />
           <div className="w-full">{children}</div>
+          <Toaster />
         </body>
       </html>
     </ClerkProvider>
