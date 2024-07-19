@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { createChat, uploadDocument } from '@/firebase/utils'; // Add this import
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useToast } from "@/components/ui/use-toast";
+
+
 
 const mainCards = [
   {
@@ -46,12 +49,17 @@ export const MainCard = ({ title, icon, description }) => {
 };
 
 export const Main = () => {
-  const MODEL_NAME = "gemini-pro-vision";
-  const { toast } = useToast();
+  const { toast } = useToast()
   const [file, setFile] = useState(null);
   const [icon, setIcon] = useState("/upload.svg");
   const router = useRouter();
   const { user } = useUser();
+  const [question, setQuestion] = useState("");
+  const [fileContent, setFileContent] = useState("");
+  const [response, setResponse] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     setFile(file);
