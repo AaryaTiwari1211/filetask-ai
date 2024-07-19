@@ -1,21 +1,26 @@
-from flask import Flask, request, send_file
-from flask_cors import CORS
-from pypdf import PdfWriter, PdfReader
+from pypdf import PdfReader, PdfWriter
+import os
 
-app = Flask(__name__)
-CORS(app)  # This should handle CORS for all routes
+def get_file_size(file_path):
+    """Returns the size of the file in bytes."""
+    return os.path.getsize(file_path)
 
-def compress_pdf(input_pdf_stream):
-    """Compresses a PDF file by optimizing it and returns the compressed PDF as a byte stream."""
-    output_pdf_stream = io.BytesIO()
-    reader = PdfReader(input_pdf_stream)
-    writer = PdfWriter()
-    
-    for page_num in range(len(reader.pages)):
-        page = reader.pages[page_num]
-        writer.add_page(page)
-    
-    writer.write(output_pdf_stream)
-    output_pdf_stream.seek(0)
-    
-    return output_pdf_stream
+# File paths
+original_file = "./report.pdf"
+compressed_file = "./report_small.pdf"
+
+# Read and write PDF
+from pypdf import PdfWriter
+
+writer = PdfWriter(clone_from=original_file)
+
+writer.remove_images()
+
+with open(compressed_file, "wb") as f:
+    writer.write(f)
+
+# Get file sizes
+original_size = get_file_size(original_file)
+compressed_size = get_file_size(compressed_file)
+print(f"Original file size: {original_size / (1024 * 1024):.2f} MB")
+print(f"Compressed file size: {compressed_size / (1024 * 1024):.2f} MB")

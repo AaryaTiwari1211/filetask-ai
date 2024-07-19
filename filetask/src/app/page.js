@@ -155,7 +155,6 @@ export const Main = () => {
             onChange={(e) => setQuestion(e.target.value)}
           />
           <Button
-            onClick={handleQuestionSubmit}
             className="mt-4 bg-green-500 text-white font-bold hover:bg-green-800 text-lg"
           >
             Chat
