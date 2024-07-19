@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import { SignedIn, SignedOut, SignOutButton, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { createChat } from "@/firebase/utils";
 
 export const useMediaQuery = (query) => {
   const [matches, setMatches] = useState(false);
@@ -114,6 +115,20 @@ const Sidebar = () => {
     }
   });
 
+  const handleCreateNewChat = async () => {
+    if (user.user) {
+      try {
+        const newChatRef = await createChat(user.user.id, 'New Chat');
+        router.push(`/chats/${newChatRef.id}`);
+      } catch (error) {
+        console.error("Error creating new chat:", error);
+      }
+    } else {
+      // Handle case when user is not logged in
+      console.log("Please log in to create a new chat");
+    }
+  };
+
   return (
     <>
       {!isMobile ? (
@@ -142,6 +157,7 @@ const Sidebar = () => {
           <CustomButton
             icon={<PlusCircleIcon size={24} />}
             text="Create New Chat"
+            onClick={handleCreateNewChat}
           />
           <SignedIn>
             <div className="my-5">

@@ -2,6 +2,9 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { createChat, uploadDocument } from '@/firebase/utils'; // Add this import
+import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 
 const mainCards = [
   {
@@ -45,12 +48,29 @@ export const MainCard = ({ title, icon, description }) => {
 export const Main = () => {
   const [file, setFile] = useState(null);
   const [icon, setIcon] = useState("/upload.svg");
-
-  const handleFileUpload = (e) => {
+  const router = useRouter();
+  const { user } = useUser();
+  const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     setFile(file);
     const ext = getFileExtension(file?.name);
     setIcon(extensions[ext] || "/upload.svg");
+    if (file && user) {
+      try {
+        // Create a new chat
+        const newChatRef = await createChat(user.id, file.name);
+        
+        // Upload the document and get the download URL
+        const downloadURL = await uploadDocument(file, newChatRef.id);
+        
+        // Navigate to the new chat page
+        router.push(`/chats/${newChatRef.id}`);
+      } catch (error) {
+        console.error("Error uploading file and creating chat:", error);
+      }
+    } else {
+      console.log("Please log in and select a file");
+    }
   };
 
   const getFileExtension = (filename) => {
