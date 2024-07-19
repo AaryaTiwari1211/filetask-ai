@@ -2,6 +2,19 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { RotatingLines } from "react-loader-spinner";
+
+function Loader() {
+  return (
+    <RotatingLines
+      strokeColor="grey"
+      strokeWidth="5"
+      animationDuration="0.75"
+      width="96"
+      visible={true}
+    />
+  )
+}
 
 const mainCards = [
   {
@@ -45,12 +58,19 @@ export const MainCard = ({ title, icon, description }) => {
 export const Main = () => {
   const [file, setFile] = useState(null);
   const [icon, setIcon] = useState("/upload.svg");
+  const [loading, setLoading] = useState(false); // Add loading state
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
-    setFile(file);
-    const ext = getFileExtension(file?.name);
-    setIcon(extensions[ext] || "/upload.svg");
+    if (file) {
+      setLoading(true); 
+      setFile(file);
+      const ext = getFileExtension(file?.name);
+      setIcon(extensions[ext] || "/upload.svg");
+      setTimeout(() => {
+        setLoading(false);
+      }, 2000);
+    }
   };
 
   const getFileExtension = (filename) => {
@@ -77,31 +97,37 @@ export const Main = () => {
         <div className="flex items-center justify-center">
           <label
             htmlFor="dropzone-file"
-            className="flex flex-col bg-transparent items-center justify-center w-96 text-center h-64 border-2 border-gray-600 rounded-2xl"
+            className="flex flex-col bg-transparent items-center justify-center w-96 text-center h-64 border-2 border-gray-600 rounded-2xl cursor-pointer hover:border-green-700 transition"
           >
             <div className="flex flex-col gap-3 items-center justify-center p-5">
-              <Image src={icon} width={32} height={32} alt="File icon" />
-              {file ? (
-                <>
-                  <p className="text-md dark:text-gray-400 text-white">
-                    {file?.name}
-                  </p>
-                  <Button
-                    className="bg-red-500 text-white"
-                    onClick={() => setFile(null)}
-                  >
-                    Cancel
-                  </Button>
-                </>
+              {loading ? (
+                <Loader /> 
               ) : (
                 <>
-                  <p className="mb-2 text-md dark:text-gray-400 text-white">
-                    <span className="font-semibold">Click to upload</span> or
-                    drag and drop
-                  </p>
-                  <p className="text-sm text-white">
-                    PDF (.pdf) , PPT (.pptx) , WORD (.docx)
-                  </p>
+                  <Image src={icon} width={32} height={32} alt="File icon" />
+                  {file ? (
+                    <>
+                      <p className="text-md dark:text-gray-400 text-white">
+                        {file?.name}
+                      </p>
+                      <Button
+                        className="bg-red-500 text-white"
+                        onClick={() => setFile(null)}
+                      >
+                        Cancel
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="mb-2 text-md dark:text-gray-400 text-white">
+                        <span className="font-semibold">Click to upload</span> or
+                        drag and drop
+                      </p>
+                      <p className="text-sm text-white">
+                        PDF (.pdf) , PPT (.pptx) , WORD (.docx)
+                      </p>
+                    </>
+                  )}
                 </>
               )}
             </div>

@@ -2,6 +2,7 @@
 import { User } from "lucide-react";
 import { useEffect, useState } from "react";
 
+
 const sampleChat = [
   { sender: "User", message: "Hi there!" },
   { sender: "Assistant", message: "Hello! How can I assist you today?" },
