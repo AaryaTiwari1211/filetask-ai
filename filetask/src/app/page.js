@@ -2,30 +2,9 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { RotatingLines } from "react-loader-spinner";
-import axios from "axios";
-import { useToast } from "@/components/ui/use-toast";
-import { PDFDocument } from "pdf-lib";
-import mammoth from "mammoth";
-import PptxGenJS from "pptxgenjs";
-import pdf from "pdf-parse";
-import {
-  GoogleGenerativeAI,
-  HarmCategory,
-  HarmBlockThreshold,
-} from "@google/generative-ai";
-
-function Loader() {
-  return (
-    <RotatingLines
-      strokeColor="grey"
-      strokeWidth="5"
-      animationDuration="0.75"
-      width="96"
-      visible={true}
-    />
-  );
-}
+import { createChat, uploadDocument } from '@/firebase/utils'; // Add this import
+import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 
 const mainCards = [
   {
@@ -71,54 +50,30 @@ export const Main = () => {
   const { toast } = useToast();
   const [file, setFile] = useState(null);
   const [icon, setIcon] = useState("/upload.svg");
-  const [loading, setLoading] = useState(false); // Add loading state
-  const [response, setResponse] = useState("");
-  const [question, setQuestion] = useState("");
-  const [fileContent, setFileContent] = useState("");
-
-  const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-
-  const handleFileUpload = (e) => {
+  const router = useRouter();
+  const { user } = useUser();
+  const handleFileUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setLoading(true);
-      setFile(file);
-      const ext = getFileExtension(file?.name);
-      setIcon(extensions[ext] || "/upload.svg");
-      setTimeout(() => {
-        setLoading(false);
-      }, 2000);
+    setFile(file);
+    const ext = getFileExtension(file?.name);
+    setIcon(extensions[ext] || "/upload.svg");
+    if (file && user) {
+      try {
+        // Create a new chat
+        const newChatRef = await createChat(user.id, file.name);
+        
+        // Upload the document and get the download URL
+        const downloadURL = await uploadDocument(file, newChatRef.id);
+        
+        // Navigate to the new chat page
+        router.push(`/chats/${newChatRef.id}`);
+      } catch (error) {
+        console.error("Error uploading file and creating chat:", error);
+      }
+    } else {
+      console.log("Please log in and select a file");
     }
   };
-
-  const genAI = new GoogleGenerativeAI(API_KEY);
-  const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-
-  const generationConfig = {
-    temperature: 0.4,
-    topK: 32,
-    topP: 1,
-    maxOutputTokens: 4096,
-  };
-
-  const safetySettings = [
-    {
-      category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-      threshold: HarmBlockThreshold.BLOCK_NONE,
-    },
-    {
-      category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-      threshold: HarmBlockThreshold.BLOCK_NONE,
-    },
-    {
-      category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-      threshold: HarmBlockThreshold.BLOCK_NONE,
-    },
-    {
-      category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-      threshold: HarmBlockThreshold.BLOCK_NONE,
-    },
-  ];
 
   const getFileExtension = (filename) => {
     return filename?.split(".").pop().toLowerCase();
