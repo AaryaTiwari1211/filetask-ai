@@ -1,40 +1,16 @@
 "use client";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { createChat, uploadDocument } from '@/firebase/utils'; // Add this import
+import { createChat, uploadDocument } from "@/firebase/utils"; // Add this import
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/components/ui/use-toast";
-
-
-
-const mainCards = [
-  {
-    title: "Clear and Precise",
-    icon: "/clear.svg",
-    description:
-      "Experience crystal-clear communication and concise answers. Upload files effortlessly to get started with our intuitive interface.",
-  },
-  {
-    title: "Personalized Answers",
-    icon: "/target.svg",
-    description:
-      "Get tailored responses that meet your specific needs. View your uploaded files easily and access customized solutions.",
-  },
-  {
-    title: "Saved Chats",
-    icon: "/profit.svg",
-    description:
-      "Keep track of all your interactions and download files seamlessly. Enjoy the convenience of accessing saved chats anytime.",
-  },
-];
-
-const extensions = {
-  pdf: "/pdf-icon.svg",
-  pptx: "/ppt-icon.svg",
-  docx: "/word-icon.svg",
-};
+import axios from "axios";
+import { mainCards } from "@/assets/static";
+import { extensions } from "@/assets/static";
+import { RotatingLines } from "react-loader-spinner";
+import { apiCall } from "@/functions/api-call";
 
 export const MainCard = ({ title, icon, description }) => {
   return (
@@ -48,33 +24,78 @@ export const MainCard = ({ title, icon, description }) => {
   );
 };
 
+function Loader() {
+  return (
+    <RotatingLines
+      strokeColor="grey"
+      strokeWidth="5"
+      animationDuration="0.75"
+      width="96"
+      visible={true}
+    />
+  );
+}
+
 export const Main = () => {
-  const { toast } = useToast()
+  const { toast } = useToast();
   const [file, setFile] = useState(null);
+  const [compressedFileURL, setCompressedFileURL] = useState(null);
   const [icon, setIcon] = useState("/upload.svg");
   const router = useRouter();
   const { user } = useUser();
-  const [question, setQuestion] = useState("");
-  const [fileContent, setFileContent] = useState("");
-  const [response, setResponse] = useState("");
+  const [sourceId, setSourceId] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const compressFile = async (file) => {
+    const ext = getFileExtension(file?.name);
+    if (ext === "pdf" && file.size > 20 * 1024 * 1024) {
+      setLoading(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        console.log("Compressing file...");
+
+        const response = await axios.post(
+          "http://127.0.0.1:5000/compress",
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+            responseType: "blob",
+          }
+        );
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        setCompressedFileURL(url);
+      } catch (error) {
+        console.error("Error compressing file:", error);
+      } finally {
+        setLoading(false);
+      }
+    } else if (ext === "pdf") {
+      setCompressedFileURL(URL.createObjectURL(file));
+    }
+  };
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     setFile(file);
+    await compressFile(file);
     const ext = getFileExtension(file?.name);
     setIcon(extensions[ext] || "/upload.svg");
-    if (file && user) {
+    const sId = await apiCall(file);
+    setSourceId(sId);
+    console.log("Source ID:", sId);
+  };
+
+  const startChat = async () => {
+    console.log("Source Id: ", sourceId);
+    if (file && user && sourceId) {
       try {
-        // Create a new chat
         const newChatRef = await createChat(user.id, file.name);
-        
-        // Upload the document and get the download URL
         const downloadURL = await uploadDocument(file, newChatRef.id);
-        
-        // Navigate to the new chat page
-        router.push(`/chats/${newChatRef.id}`);
+        console.log("Source ID:", sourceId);
+        router.push(`/chats/${newChatRef.id}/${sourceId}`);
       } catch (error) {
         console.error("Error uploading file and creating chat:", error);
       }
@@ -112,27 +133,57 @@ export const Main = () => {
               ) : (
                 <>
                   <Image src={icon} width={32} height={32} alt="File icon" />
-                  {file ? (
+                  {compressedFileURL ? (
                     <>
                       <p className="text-md dark:text-gray-400 text-white">
-                        {file?.name}
+                        Compressed File
                       </p>
+                      <Button className="bg-green-500 text-white">
+                        <a
+                          href={compressedFileURL}
+                          download="compressed_file.pdf"
+                          className="text-blue-500 underline"
+                        >
+                          Download Compressed File
+                        </a>
+                      </Button>
                       <Button
                         className="bg-red-500 text-white"
-                        onClick={() => setFile(null)}
+                        onClick={() => {
+                          setFile(null);
+                          setCompressedFileURL(null);
+                        }}
                       >
                         Cancel
                       </Button>
                     </>
                   ) : (
                     <>
-                      <p className="mb-2 text-md dark:text-gray-400 text-white">
-                        <span className="font-semibold">Click to upload</span>{" "}
-                        or drag and drop
-                      </p>
-                      <p className="text-sm text-white">
-                        PDF (.pdf) , PPT (.pptx) , WORD (.docx)
-                      </p>
+                      {file ? (
+                        <>
+                          <p className="text-md dark:text-gray-400 text-white">
+                            {file?.name}
+                          </p>
+                          <Button
+                            className="bg-red-500 text-white"
+                            onClick={() => setFile(null)}
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <p className="mb-2 text-md dark:text-gray-400 text-white">
+                            <span className="font-semibold">
+                              Click to upload
+                            </span>{" "}
+                            or drag and drop
+                          </p>
+                          <p className="text-sm text-white">
+                            PDF (.pdf) , PPT (.pptx) , WORD (.docx)
+                          </p>
+                        </>
+                      )}
                     </>
                   )}
                 </>
@@ -147,15 +198,8 @@ export const Main = () => {
           </label>
         </div>
         <div className="flex flex-col items-center mt-4">
-          <input
-            type="text"
-            placeholder="Ask a question..."
-            className="p-2 rounded border border-gray-300"
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-          />
           <Button
-            onClick={handleQuestionSubmit}
+            onClick={startChat}
             className="mt-4 bg-green-500 text-white font-bold hover:bg-green-800 text-lg"
           >
             Chat
@@ -171,12 +215,6 @@ export const Main = () => {
             />
           ))}
         </div>
-        {response && (
-          <div className="w-full max-w-3xl p-4 bg-white rounded-lg shadow mt-4">
-            <h2 className="text-2xl font-bold">Response</h2>
-            <p>{response}</p>
-          </div>
-        )}
       </div>
     </div>
   );
