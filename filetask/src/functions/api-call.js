@@ -26,7 +26,7 @@ export const geminiApiCall = async (file) => {
   formData.append("file", file);
 
   try {
-    const result = await axios.post("http://13.201.63.217/upload", formData, {
+    const result = await axios.post("https://13.201.63.217/upload", formData, {
       timeout: 1200000000,
       headers: {
         "Content-Type": "multipart/form-data",
@@ -62,7 +62,7 @@ export const SmallPdfChat = async ({ sourceId, newMessage }) => {
 };
 
 export const largePdfChat = async ({ context, prompt }) => {
-  const response = await axios.post("http://13.201.63.217/chat", {
+  const response = await axios.post("https://13.201.63.217/chat", {
     context: context,
     prompt: prompt,
   });
