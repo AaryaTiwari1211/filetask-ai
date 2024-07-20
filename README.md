@@ -23,7 +23,7 @@ To get started with FileTask AI, follow these steps:
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/FileTaskAI.git
+   git clone https://github.com/AaryaTiwari1211/filetask-ai
    cd FileTaskAI
    ```
 
