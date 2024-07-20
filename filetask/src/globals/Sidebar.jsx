@@ -11,12 +11,14 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-
+import { extensions } from "@/assets/static";
 import { useEffect, useState } from "react";
 import { SignedIn, SignedOut, SignOutButton, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { createChat } from "@/firebase/utils";
+import { createChat, uploadDocument } from "@/firebase/utils";
+import { apiCall, geminiApiCall } from "@/functions/api-call";
+import { RotatingLines } from "react-loader-spinner";
 
 export const useMediaQuery = (query) => {
   const [matches, setMatches] = useState(false);
@@ -88,6 +90,18 @@ const chats = [
   },
 ];
 
+function Loader() {
+  return (
+    <RotatingLines
+      strokeColor="white"
+      strokeWidth="3"
+      animationDuration="0.75"
+      width="30"
+      visible={true}
+    />
+  );
+}
+
 export const CustomButton = ({ icon, text, onClick, className }) => {
   return (
     <Button
@@ -106,7 +120,11 @@ const Sidebar = () => {
   const isMobile = useMediaQuery("(max-width: 960px)");
   const user = useUser();
   const router = useRouter();
-
+  const [file, setFile] = useState(null);
+  const [sourceId, setSourceId] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sum, setSum] = useState(null);
+  const [icon, setIcon] = useState("/upload.svg");
   useEffect(() => {
     if (user.user) {
       console.log("User is logged in");
@@ -115,18 +133,43 @@ const Sidebar = () => {
     }
   });
 
-  const handleCreateNewChat = async () => {
-    if (user.user) {
-      try {
-        const newChatRef = await createChat(user.user.id, 'New Chat');
-        router.push(`/chats/${newChatRef.id}`);
-      } catch (error) {
-        console.error("Error creating new chat:", error);
-      }
+  const handleFileUpload = async (e) => {
+    setLoading(true);
+    const file = e.target.files[0];
+    setFile(file);
+    if (file.size > 20 * 1024 * 1024) {
+      const result = await geminiApiCall(file);
+      setSum(result);
     } else {
-      // Handle case when user is not logged in
-      console.log("Please log in to create a new chat");
+      const sId = await apiCall(file);
+      setSourceId(sId);
+      console.log("Source ID:", sId);
     }
+
+    const ext = getFileExtension(file?.name);
+    setIcon(extensions[ext] || "/upload.svg");
+    handleChat();
+  };
+
+  const handleChat = async () => {
+    try {
+      const newChatRef = await createChat(user.user.id, file.name, sum); // Pass the summary to createChat
+      const downloadURL = await uploadDocument(file, newChatRef.id);
+
+      if (file.size > 20 * 1024 * 1024) {
+        router.push(`/chats/largeFile/${newChatRef.id}`);
+      } else {
+        router.push(`/chats/${newChatRef.id}/${sourceId}`);
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error("Error uploading file and creating chat:", error);
+      setLoading(false);
+    }
+  };
+
+  const getFileExtension = (filename) => {
+    return filename?.split(".").pop().toLowerCase();
   };
 
   return (
@@ -154,11 +197,30 @@ const Sidebar = () => {
               />
             </div>
           </SignedOut>
-          <CustomButton
-            icon={<PlusCircleIcon size={24} />}
-            text="Create New Chat"
-            onClick={handleCreateNewChat}
-          />
+          <label
+            htmlFor="create-chat-file"
+            className="bg-secondary text-white my-5 text-lg py-3 flex gap-2 items-center justify-center hover:bg-green-700 cursor-pointer rounded-lg px-4"
+          >
+            {loading ? (
+              <div className="flex justify-center items-center">
+                <Loader />
+              </div>
+            ) : (
+              <>
+                <PlusCircleIcon size={24} />
+                <span className="text-[16px] tracking-wide">
+                  Create New Chat
+                </span>
+                <input
+                  type="file"
+                  id="create-chat-file"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+              </>
+            )}
+          </label>
+
           <SignedIn>
             <div className="my-5">
               <h2 className="text-lg text-white font-primary">Chats</h2>
