@@ -15,13 +15,14 @@ export const addMessage = async (chatId, content, role) => {
     timestamp: Timestamp.now()
   });
 };
-export const createChat = async (userId, title) => {
+export const createChat = async (userId, title ,summary) => {
   return await addDoc(collection(db, 'chats'), {
     userId,
     title,
     createdAt: Timestamp.now(),
     updatedAt: Timestamp.now(),
-    documents: []
+    documents: [],
+    summary: summary ? summary : ""
   });
 };
 
