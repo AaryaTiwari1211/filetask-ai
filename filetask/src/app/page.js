@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { createChat, uploadDocument } from "@/firebase/utils"; // Add this import
 import { useRouter } from "next/navigation";
@@ -11,6 +11,7 @@ import { mainCards } from "@/assets/static";
 import { extensions } from "@/assets/static";
 import { RotatingLines } from "react-loader-spinner";
 import { apiCall } from "@/functions/api-call";
+import { geminiApiCall } from "@/functions/api-call";
 
 export const MainCard = ({ title, icon, description }) => {
   return (
@@ -45,62 +46,44 @@ export const Main = () => {
   const { user } = useUser();
   const [sourceId, setSourceId] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sum, setSum] = useState(null);
 
-  const compressFile = async (file) => {
-    const ext = getFileExtension(file?.name);
-    if (ext === "pdf" && file.size > 20 * 1024 * 1024) {
-      setLoading(true);
-      try {
-        const formData = new FormData();
-        formData.append("file", file);
-        console.log("Compressing file...");
-
-        const response = await axios.post(
-          "http://127.0.0.1:5000/compress",
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-            responseType: "blob",
-          }
-        );
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        setCompressedFileURL(url);
-      } catch (error) {
-        console.error("Error compressing file:", error);
-      } finally {
-        setLoading(false);
-      }
-    } else if (ext === "pdf") {
-      setCompressedFileURL(URL.createObjectURL(file));
+  useEffect(() => {
+    if (sum) {
+      console.log("Summary:", sum);
     }
-  };
+  }, [sum]);
 
   const handleFileUpload = async (e) => {
+    setLoading(true);
     const file = e.target.files[0];
     setFile(file);
-    await compressFile(file);
+    if (file.size > 20 * 1024 * 1024) {
+      const result = await geminiApiCall(file);
+      setSum(result);
+    } else {
+      const sId = await apiCall(file);
+      setSourceId(sId);
+      console.log("Source ID:", sId);
+    }
+
     const ext = getFileExtension(file?.name);
     setIcon(extensions[ext] || "/upload.svg");
-    const sId = await apiCall(file);
-    setSourceId(sId);
-    console.log("Source ID:", sId);
+    setLoading(false);
   };
 
-  const startChat = async () => {
-    console.log("Source Id: ", sourceId);
-    if (file && user && sourceId) {
-      try {
-        const newChatRef = await createChat(user.id, file.name);
-        const downloadURL = await uploadDocument(file, newChatRef.id);
-        console.log("Source ID:", sourceId);
+  const handleChat = async () => {
+    try {
+      const newChatRef = await createChat(user.id, file.name, sum); // Pass the summary to createChat
+      const downloadURL = await uploadDocument(file, newChatRef.id);
+
+      if (file.size > 20 * 1024 * 1024) {
+        router.push(`/chats/largeFile/${newChatRef.id}`);
+      } else {
         router.push(`/chats/${newChatRef.id}/${sourceId}`);
-      } catch (error) {
-        console.error("Error uploading file and creating chat:", error);
       }
-    } else {
-      console.log("Please log in and select a file");
+    } catch (error) {
+      console.error("Error uploading file and creating chat:", error);
     }
   };
 
@@ -122,7 +105,7 @@ export const Main = () => {
             The power of AI at your service - Tame the Knowledge
           </p>
         </div>
-        <div className="flex items-center justify-center">
+        <div className="flex flex-col items-center justify-center">
           <label
             htmlFor="dropzone-file"
             className="flex flex-col bg-transparent items-center justify-center w-96 text-center h-64 border-2 border-gray-600 rounded-2xl cursor-pointer hover:border-green-700 transition"
@@ -138,24 +121,6 @@ export const Main = () => {
                       <p className="text-md dark:text-gray-400 text-white">
                         Compressed File
                       </p>
-                      <Button className="bg-green-500 text-white">
-                        <a
-                          href={compressedFileURL}
-                          download="compressed_file.pdf"
-                          className="text-blue-500 underline"
-                        >
-                          Download Compressed File
-                        </a>
-                      </Button>
-                      <Button
-                        className="bg-red-500 text-white"
-                        onClick={() => {
-                          setFile(null);
-                          setCompressedFileURL(null);
-                        }}
-                      >
-                        Cancel
-                      </Button>
                     </>
                   ) : (
                     <>
@@ -164,12 +129,6 @@ export const Main = () => {
                           <p className="text-md dark:text-gray-400 text-white">
                             {file?.name}
                           </p>
-                          <Button
-                            className="bg-red-500 text-white"
-                            onClick={() => setFile(null)}
-                          >
-                            Cancel
-                          </Button>
                         </>
                       ) : (
                         <>
@@ -196,16 +155,32 @@ export const Main = () => {
               onChange={handleFileUpload}
             />
           </label>
+          {file && (
+            <div className="flex gap-10 justify-center items-center w-full">
+              <Button
+                onClick={handleChat}
+                className="mt-4 bg-green-500 text-white font-bold hover:bg-green-800 text-lg"
+              >
+                Chat
+              </Button>
+              <Button className="mt-4 bg-green-500 text-white font-bold hover:bg-green-800 text-lg">
+                <a href={compressedFileURL} download="compressed_file.pdf">
+                  Download
+                </a>
+              </Button>
+              <Button
+                className="mt-4 bg-red-500 text-white font-bold hover:bg-green-800 text-lg"
+                onClick={() => {
+                  setFile(null);
+                  setCompressedFileURL(null);
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
         </div>
-        <div className="flex flex-col items-center mt-4">
-          <Button
-            onClick={startChat}
-            className="mt-4 bg-green-500 text-white font-bold hover:bg-green-800 text-lg"
-          >
-            Chat
-          </Button>
-        </div>
-        <div className="flex gap-2 items-center gap-10 m-10">
+        <div className="flex gap-2 items-center gap-10 mx-10">
           {mainCards.map((card, index) => (
             <MainCard
               key={index}

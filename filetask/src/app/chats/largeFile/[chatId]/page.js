@@ -6,7 +6,7 @@ import { getChatById, getMessagesByChat, addMessage } from "@/firebase/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
-import { SmallPdfChat } from "@/functions/api-call";
+import { largePdfChat } from "@/functions/api-call";
 
 const ChatBubble = ({ sender, message }) => {
   const isUser = sender === "user";
@@ -84,7 +84,7 @@ const ChatUI = ({
 };
 
 export default function ChatPage({ params }) {
-  const { chatId, sourceId } = params;
+  const { chatId } = params;
   const { user } = useUser();
 
   const [chat, setChat] = useState(null);
@@ -119,16 +119,18 @@ export default function ChatPage({ params }) {
     if (!newMessage.trim() || !user) return;
     console.log("Sending message:", newMessage);
     console.log("Chat ID:", chatId);
-    console.log("Source ID:", sourceId);
     try {
       await addMessage(chatId, newMessage, "user");
 
-      // Make the API call to chatPDF
-      const response = await SmallPdfChat({ sourceId, newMessage });
+      const response = await largePdfChat({
+        context: chat.summary,
+        prompt: newMessage,
+      });
 
-      // Add the assistant's response to the messages
-      if (response.data.content) {
-        await addMessage(chatId, response.data.content, "assistant");
+      console.log("Response:", response.data);
+
+      if (response.data.response) {
+        await addMessage(chatId, response.data.response, "assistant");
         await loadChatAndMessages();
       } else {
         console.error("Error: No content received from API");
@@ -139,6 +141,7 @@ export default function ChatPage({ params }) {
         error.response ? error.response.data : error.message
       );
     }
+    setNewMessage("");
   };
 
   if (!chat) {
