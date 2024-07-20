@@ -6,11 +6,17 @@ import google.generativeai as genai
 import PyPDF2
 from pptx import Presentation
 from docx import Document
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
-genai.configure(api_key="AIzaSyDlcuIhbhk1rJvYwBQA4Hs3_PbZU_UbqRs")
+app.config['GEMINI_API_KEY'] = os.getenv('GEMINI_API_KEY')
+
+genai.configure(api_key=app.config['GEMINI_API_KEY'])
+
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 def count_tokens(text):
@@ -68,7 +74,7 @@ def process_document(file_stream, file_type, token_limit=20000):
     current_tokens = 0
     summary = ""
 
-    for page_text in document_texts:
+    for page_text in document_texts[10:15]:
         if not page_text.strip():
             continue
         page_tokens = count_tokens(page_text)
