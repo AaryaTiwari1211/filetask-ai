@@ -1,22 +1,30 @@
 "use client";
 import { Bot, User } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
-import { getChatById, getMessagesByChat, addMessage } from '@/firebase/utils';
+import { getChatById, getMessagesByChat, addMessage } from "@/firebase/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
+import axios from "axios";
 
 const ChatBubble = ({ sender, message }) => {
   const isUser = sender === "user";
   return (
-    <div className={`flex items-center ${isUser ? "justify-end" : "justify-start"} mb-4`}>
+    <div
+      className={`flex items-center ${
+        isUser ? "justify-end" : "justify-start"
+      } mb-4`}
+    >
       {!isUser && (
         <div className="mr-2">
           <Bot className="w-6 h-6 text-white" />
         </div>
       )}
-      <div className={`p-3 rounded-lg max-w-md flex ${isUser ? "bg-gray-400/10 text-white" : "bg-transparent text-white"}`}>
+      <div
+        className={`p-3 rounded-lg max-w-md flex ${
+          isUser ? "bg-gray-400/10 text-white" : "bg-transparent text-white"
+        }`}
+      >
         <p>{message}</p>
       </div>
       {isUser && (
@@ -28,7 +36,13 @@ const ChatBubble = ({ sender, message }) => {
   );
 };
 
-const ChatUI = ({ chat, messages, newMessage, setNewMessage, handleSendMessage }) => {
+const ChatUI = ({
+  chat,
+  messages,
+  newMessage,
+  setNewMessage,
+  handleSendMessage,
+}) => {
   const sortedMessages = messages.sort((a, b) => a.timestamp - b.timestamp);
 
   const handleKeyPress = (e) => {
@@ -69,12 +83,17 @@ const ChatUI = ({ chat, messages, newMessage, setNewMessage, handleSendMessage }
 };
 
 export default function ChatPage({ params }) {
-  const { chatId } = params;
+  const { chatId, sourceId } = params;
   const { user } = useUser();
 
   const [chat, setChat] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
+  const [newMessage, setNewMessage] = useState("");
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   useEffect(() => {
     if (chatId && user) {
@@ -97,14 +116,44 @@ export default function ChatPage({ params }) {
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!newMessage.trim() || !user) return;
-
+    console.log("Sending message:", newMessage);
+    console.log("Chat ID:", chatId);
+    console.log("Source ID:", sourceId);
     try {
-      await addMessage(chatId, newMessage, 'user');
-      setNewMessage('');
-      await addMessage(chatId, "i am the assistant you are not", 'assistant');
-      await loadChatAndMessages();
+      await addMessage(chatId, newMessage, "user");
+
+      // Make the API call to chatPDF
+      const response = await axios.post(
+        "https://api.chatpdf.com/v1/chats/message",
+        {
+          // stream: true,
+          sourceId: sourceId,
+          messages: [
+            {
+              role: "user",
+              content: newMessage,
+            },
+          ],
+        },
+        {
+          headers: {
+            "x-api-key": process.env.NEXT_PUBLIC_CHATPDF_API_KEY,
+          },
+        }
+      );
+
+      // Add the assistant's response to the messages
+      if (response.data.content) {
+        await addMessage(chatId, response.data.content, "assistant");
+        await loadChatAndMessages();
+      } else {
+        console.error("Error: No content received from API");
+      }
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error(
+        "Error sending message:",
+        error.response ? error.response.data : error.message
+      );
     }
   };
 
