@@ -19,6 +19,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { createChat, uploadDocument } from "@/firebase/utils";
 import { apiCall, geminiApiCall } from "@/functions/api-call";
 import { RotatingLines } from "react-loader-spinner";
+import { getChatsByUser } from "@/firebase/utils";
 
 export const useMediaQuery = (query) => {
   const [matches, setMatches] = useState(false);
@@ -51,9 +52,13 @@ const ProfileCard = ({ name, email, pfp }) => {
   );
 };
 
-export function ChatCard({ icon, title }) {
+export function ChatCard({ icon, title, href, sourceId }) {
+  const router = useRouter();
   return (
-    <div className="p-3 gap-3 flex items-center rounded-xl my-2 cursor-pointer hover:bg-light-bg transition">
+    <div
+      className="p-3 gap-3 flex items-center rounded-xl my-2 cursor-pointer hover:bg-light-bg transition"
+      onClick={() => router.push(`/chats/${href}/${sourceId}`)}
+    >
       <Image src={icon} width={24} height={24} className="" />
       <p className="text-[16px] tracking-wide text-white">{title}</p>
     </div>
@@ -72,21 +77,6 @@ const options = [
   {
     title: "Help",
     icon: "/help-ic.svg",
-  },
-];
-
-const chats = [
-  {
-    title: "General",
-    icon: "/pdf-icon.svg",
-  },
-  {
-    title: "General",
-    icon: "/word-icon.svg",
-  },
-  {
-    title: "General",
-    icon: "/ppt-icon.svg",
   },
 ];
 
@@ -125,13 +115,18 @@ const Sidebar = () => {
   const [loading, setLoading] = useState(false);
   const [sum, setSum] = useState(null);
   const [icon, setIcon] = useState("/upload.svg");
+  const [userChats, setUserChats] = useState([]);
+
   useEffect(() => {
     if (user.user) {
-      console.log("User is logged in");
-      console.log(user);
-      // console.log(user.user.emailAddresses[0].emailAddress);
+      const getChats = async () => {
+        const chats = await getChatsByUser(user.user.id);
+        setUserChats(chats);
+        console.log("Chats:", chats);
+      };
+      getChats();
     }
-  });
+  }, [user.user]);
 
   const handleFileUpload = async (e) => {
     setLoading(true);
@@ -224,13 +219,21 @@ const Sidebar = () => {
           <SignedIn>
             <div className="my-5">
               <h2 className="text-lg text-white font-primary">Chats</h2>
-              {chats.slice(0, 5).map((chat) => (
-                <ChatCard
-                  key={chat.title}
-                  icon={chat.icon}
-                  title={chat.title}
-                />
-              ))}
+              {userChats.slice(0, 3).map((chat) => {
+                const getDocIcon = (chat) => {
+                  const ext = getFileExtension(chat.title);
+                  return extensions[ext] || "/pdf-icon.svg";
+                };
+                return (
+                  <ChatCard
+                    key={chat.title}
+                    icon={getDocIcon(chat)}
+                    title={chat.title}
+                    href={chat.id}
+                    sourceId={chat.sourceId}
+                  />
+                );
+              })}
             </div>
           </SignedIn>
           <SignedOut>
@@ -260,7 +263,10 @@ const Sidebar = () => {
       ) : (
         <Sheet>
           <SheetTrigger>
-            <MenuIcon size={40} className="text-white m-2" />
+            <MenuIcon
+              size={50}
+              className="absolute top-[10px] left-[10px] text-white lg:m-2 xs:m-0"
+            />
           </SheetTrigger>
           <SheetContent className="bg-bg border-none">
             <SignedIn>
@@ -287,13 +293,21 @@ const Sidebar = () => {
             <div className="my-5">
               <SignedIn>
                 <h2 className="text-lg text-white font-primary">Chats</h2>
-                {chats.slice(0, 5).map((chat) => (
-                  <ChatCard
-                    key={chat.title}
-                    icon={chat.icon}
-                    title={chat.title}
-                  />
-                ))}
+                {userChats.slice(0, 3).map((chat) => {
+                  const getDocIcon = (chat) => {
+                    const ext = getFileExtension(chat.title);
+                    return extensions[ext] || "/pdf-icon.svg";
+                  };
+                  return (
+                    <ChatCard
+                      key={chat.title}
+                      icon={getDocIcon(chat)}
+                      title={chat.title}
+                      href={chat.id}
+                      sourceId={chat.sourceId}
+                    />
+                  );
+                })}
               </SignedIn>
               <SignedOut>
                 <p className="text-lg text-white">Log in to view chats</p>

@@ -12,6 +12,9 @@ import { extensions } from "@/assets/static";
 import { RotatingLines } from "react-loader-spinner";
 import { apiCall } from "@/functions/api-call";
 import { geminiApiCall } from "@/functions/api-call";
+import { getChatsByUser } from "@/firebase/utils";
+import { checkExistingChat } from "@/firebase/utils";
+import { useMediaQuery } from "@/globals/Sidebar";
 
 export const MainCard = ({ title, icon, description }) => {
   return (
@@ -48,17 +51,18 @@ export const Main = () => {
   const [loading, setLoading] = useState(false);
   const [sum, setSum] = useState(null);
 
-  useEffect(() => {
-    if (sum) {
-      console.log("Summary:", sum);
-    }
-  }, [sum]);
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   const handleFileUpload = async (e) => {
     setLoading(true);
     const file = e.target.files[0];
     setFile(file);
     if (file.size > 20 * 1024 * 1024) {
+      toast({
+        title: "Large File Detected: Upload may take some time",
+        description: "Please be patient while we process your file",
+        className: "bg-yellow-500",
+      });
       const result = await geminiApiCall(file);
       setSum(result);
     } else {
@@ -69,12 +73,27 @@ export const Main = () => {
 
     const ext = getFileExtension(file?.name);
     setIcon(extensions[ext] || "/upload.svg");
+    toast({
+      title: "File Uploaded",
+      description: "File uploaded successfully",
+      className: "bg-green-500",
+    });
     setLoading(false);
   };
 
   const handleChat = async () => {
     try {
-      const newChatRef = await createChat(user.id, file.name, sum); // Pass the summary to createChat
+      const existingChat = await checkExistingChat(user.id, file.name);
+      if (existingChat) {
+        router.push(`/chats/${existingChat}/${sourceId}`);
+        return;
+      }
+      const newChatRef = await createChat(user.id, file.name, sum, sourceId); // Pass the summary to createChat
+      toast({
+        title: "Chat Created",
+        description: "Chat created successfully",
+        className: "bg-green-500",
+      })
       const downloadURL = await uploadDocument(file, newChatRef.id);
 
       if (file.size > 20 * 1024 * 1024) {
@@ -93,7 +112,7 @@ export const Main = () => {
 
   return (
     <div className="w-full h-full flex">
-      <div className="m-3 rounded-lg bg-gradient-to-t from-green-900 via-bg to-bg flex flex-col gap-12 justify-center items-center w-full">
+      <div className="lg:m-3 xs:m-0 lg:rounded-lg xs:rounded-none bg-gradient-to-t from-green-900 via-bg to-bg flex flex-col gap-12 justify-center items-center w-full">
         <div className="flex flex-col gap-2 items-center mt-16">
           <h1 className="text-[48px] font-bold text-white tracking-wide">
             Welcome to{" "}
@@ -156,17 +175,12 @@ export const Main = () => {
             />
           </label>
           {file && (
-            <div className="flex gap-10 justify-center items-center w-full">
+            <div className="flex gap-10 justify-center items-center w-full flex-wrap">
               <Button
                 onClick={handleChat}
                 className="mt-4 bg-green-500 text-white font-bold hover:bg-green-800 text-lg"
               >
                 Chat
-              </Button>
-              <Button className="mt-4 bg-green-500 text-white font-bold hover:bg-green-800 text-lg">
-                <a href={compressedFileURL} download="compressed_file.pdf">
-                  Download
-                </a>
               </Button>
               <Button
                 className="mt-4 bg-red-500 text-white font-bold hover:bg-green-800 text-lg"
@@ -180,7 +194,7 @@ export const Main = () => {
             </div>
           )}
         </div>
-        <div className="flex gap-2 items-center gap-10 mx-10">
+        <div className="flex gap-2 items-center gap-10 mx-10 flex-wrap justify-center">
           {mainCards.map((card, index) => (
             <MainCard
               key={index}
