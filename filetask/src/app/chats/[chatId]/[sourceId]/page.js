@@ -7,15 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { SmallPdfChat } from "@/functions/api-call";
+import { useRouter } from "next/navigation";
 
 const ChatBubble = ({ sender, message }) => {
   const isUser = sender === "user";
   return (
-    <div
-      className={`flex items-center ${
-        isUser ? "justify-end" : "justify-start"
-      } mb-4`}
-    >
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
       {!isUser && (
         <div className="mr-2">
           <Bot className="w-6 h-6 text-white" />
@@ -23,7 +20,7 @@ const ChatBubble = ({ sender, message }) => {
       )}
       <div
         className={`p-3 rounded-lg max-w-md flex ${
-          isUser ? "bg-gray-400/10 text-white" : "bg-transparent text-white"
+          isUser ? "bg-gray-400/10 text-white" : "bg-blue-700 text-white"
         }`}
       >
         <p>{message}</p>
@@ -51,11 +48,15 @@ const ChatUI = ({
       handleSendMessage(e);
     }
   };
+  const router = useRouter();
 
   return (
     <div className="w-full h-full flex justify-center items-center">
       <div className="w-full h-full flex flex-col items-center justify-center bg-bg">
         <div className="w-full h-full bg-transparent p-4 flex flex-col">
+          <h1 className="text-2xl text-white font-bold">
+            Talking With: {chat.title}
+          </h1>
           <div className="flex flex-col gap-2 overflow-y-auto h-full">
             {sortedMessages.map((msg, index) => (
               <ChatBubble key={index} sender={msg.role} message={msg.content} />
@@ -75,6 +76,12 @@ const ChatUI = ({
               onClick={handleSendMessage}
             >
               Send
+            </Button>
+            <Button
+              className="ml-2 p-2 bg-red-500 text-white rounded-lg"
+              onClick={() => router.push("/")}
+            >
+              Back
             </Button>
           </div>
         </div>
@@ -118,18 +125,14 @@ export default function ChatPage({ params }) {
     e.preventDefault();
     if (!newMessage.trim() || !user) return;
     console.log("Sending message:", newMessage);
-    console.log("Chat ID:", chatId);
-    console.log("Source ID:", sourceId);
     try {
       await addMessage(chatId, newMessage, "user");
-
-      // Make the API call to chatPDF
       const response = await SmallPdfChat({ sourceId, newMessage });
 
-      // Add the assistant's response to the messages
       if (response.data.content) {
         await addMessage(chatId, response.data.content, "assistant");
         await loadChatAndMessages();
+        setNewMessage("");
       } else {
         console.error("Error: No content received from API");
       }
