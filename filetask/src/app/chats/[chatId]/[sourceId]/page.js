@@ -8,25 +8,32 @@ import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { SmallPdfChat } from "@/functions/api-call";
 import { useRouter } from "next/navigation";
+import ReactMarkdown from 'react-markdown';
 
 const ChatBubble = ({ sender, message }) => {
   const isUser = sender === "user";
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
       {!isUser && (
-        <div className="mr-2">
+        <div className="mr-2 flex-shrink-0">
           <Bot className="w-6 h-6 text-white" />
         </div>
       )}
       <div
-        className={`p-3 rounded-lg max-w-md flex ${
-          isUser ? "bg-gray-400/10 text-white" : "bg-blue-700 text-white"
+        className={`p-3 rounded-lg ${
+          isUser ? "bg-gray-400/10 text-white max-w-md" : "bg-blue-800 text-white min-w-[40%] max-w-[60%]"
         }`}
       >
-        <p>{message}</p>
+        {isUser ? (
+          <p>{message}</p>
+        ) : (
+          <ReactMarkdown className="prose prose-invert max-w-none">
+            {message}
+          </ReactMarkdown>
+        )}
       </div>
       {isUser && (
-        <div className="ml-2">
+        <div className="ml-2 flex-shrink-0">
           <User className="w-6 h-6 text-white" />
         </div>
       )}
