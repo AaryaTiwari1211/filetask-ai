@@ -49,7 +49,7 @@ export const Main = () => {
   const { user } = useUser();
   const [sourceId, setSourceId] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sum, setSum] = useState(null);
+  const [summary, setSummary] = useState("");
 
   const isMobile = useMediaQuery("(max-width: 768px)");
 
@@ -57,27 +57,36 @@ export const Main = () => {
     setLoading(true);
     const file = e.target.files[0];
     setFile(file);
-    if (file.size > 20 * 1024 * 1024) {
-      toast({
-        title: "Large File Detected: Upload may take some time",
-        description: "Please be patient while we process your file",
-        className: "bg-yellow-500",
-      });
-      const result = await geminiApiCall(file);
-      setSum(result);
-    } else {
-      const sId = await apiCall(file);
-      setSourceId(sId);
-      console.log("Source ID:", sId);
-    }
+    try {
+      if (file.size > 20 * 1024 * 1024) {
+        toast({
+          title: "Large File Detected: Upload may take some time",
+          description: "Please be patient while we process your file",
+          className: "bg-yellow-500 text-white",
+        });
+        const result = await geminiApiCall(file);
+        setSummary(result);
+      } else {
+        const sId = await apiCall(file);
+        setSourceId(sId);
+        console.log("Source ID:", sId);
+      }
 
-    const ext = getFileExtension(file?.name);
-    setIcon(extensions[ext] || "/upload.svg");
-    toast({
-      title: "File Uploaded",
-      description: "File uploaded successfully",
-      className: "bg-green-500",
-    });
+      const ext = getFileExtension(file?.name);
+      setIcon(extensions[ext] || "/upload.svg");
+      toast({
+        title: "File Uploaded",
+        description: "File uploaded successfully",
+        className: "bg-green-500 text-white",
+      });
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast({
+        title: "Error",
+        description: "Error uploading file",
+        className: "bg-red-500 text-white",
+      });
+    }
     setLoading(false);
   };
 
@@ -85,15 +94,22 @@ export const Main = () => {
     try {
       const existingChat = await checkExistingChat(user.id, file.name);
       if (existingChat) {
+        toast({
+          title: "Chat Exists",
+          description: "Chat already exists",
+          className: "bg-yellow-500 text-white",
+        });
         router.push(`/chats/${existingChat}/${sourceId}`);
         return;
       }
-      const newChatRef = await createChat(user.id, file.name, sum, sourceId); // Pass the summary to createChat
+      setLoading(true);
+      const type = file.size > 20 * 1024 * 1024 ? "large" : "small";
+      const newChatRef = await createChat(user.id, file.name, summary, sourceId , type); // Pass the summary to createChat
       toast({
         title: "Chat Created",
         description: "Chat created successfully",
         className: "bg-green-500",
-      })
+      });
       const downloadURL = await uploadDocument(file, newChatRef.id);
 
       if (file.size > 20 * 1024 * 1024) {
@@ -102,7 +118,12 @@ export const Main = () => {
         router.push(`/chats/${newChatRef.id}/${sourceId}`);
       }
     } catch (error) {
-      console.error("Error uploading file and creating chat:", error);
+      console.error("Error creating chat:", error);
+      toast({
+        title: "Error",
+        description: "Error creating chat",
+        className: "bg-red-500 text-white",
+      });
     }
   };
 

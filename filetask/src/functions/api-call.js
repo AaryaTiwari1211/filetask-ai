@@ -43,7 +43,7 @@ export const SmallPdfChat = async ({ sourceId, newMessage }) => {
   const response = await axios.post(
     "https://api.chatpdf.com/v1/chats/message",
     {
-      // stream: true,
+      stream: true,
       sourceId: sourceId,
       messages: [
         {

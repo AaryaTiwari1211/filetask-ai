@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { SmallPdfChat } from "@/functions/api-call";
 import { useRouter } from "next/navigation";
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown from "react-markdown";
 
-const ChatBubble = ({ sender, message }) => {
+export const ChatBubble = ({ sender, message }) => {
   const isUser = sender === "user";
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
@@ -21,7 +21,9 @@ const ChatBubble = ({ sender, message }) => {
       )}
       <div
         className={`p-3 rounded-lg ${
-          isUser ? "bg-gray-400/10 text-white max-w-md" : "bg-blue-800 text-white min-w-[40%] max-w-[60%]"
+          isUser
+            ? "bg-gray-400/10 text-white max-w-md"
+            : "bg-blue-800 text-white min-w-[40%] max-w-[60%]"
         }`}
       >
         {isUser ? (
@@ -41,7 +43,7 @@ const ChatBubble = ({ sender, message }) => {
   );
 };
 
-const ChatUI = ({
+export const ChatUI = ({
   chat,
   messages,
   newMessage,
@@ -49,6 +51,13 @@ const ChatUI = ({
   handleSendMessage,
 }) => {
   const sortedMessages = messages.sort((a, b) => a.timestamp - b.timestamp);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
@@ -61,13 +70,14 @@ const ChatUI = ({
     <div className="w-full h-full flex justify-center items-center">
       <div className="w-full h-full flex flex-col items-center justify-center bg-bg">
         <div className="w-full h-full bg-transparent p-4 flex flex-col">
-          <h1 className="text-2xl text-white font-bold">
+          <h1 className="text-2xl text-white font-bold px-1 py-3">
             Talking With: {chat.title}
           </h1>
           <div className="flex flex-col gap-2 overflow-y-auto h-full">
             {sortedMessages.map((msg, index) => (
               <ChatBubble key={index} sender={msg.role} message={msg.content} />
             ))}
+            <div ref={messagesEndRef}></div>
           </div>
           <div className="mt-4 flex items-center">
             <Input

@@ -20,6 +20,8 @@ import { createChat, uploadDocument } from "@/firebase/utils";
 import { apiCall, geminiApiCall } from "@/functions/api-call";
 import { RotatingLines } from "react-loader-spinner";
 import { getChatsByUser } from "@/firebase/utils";
+import { checkExistingChat } from "@/firebase/utils";
+import { useToast } from "@/components/ui/use-toast";
 
 export const useMediaQuery = (query) => {
   const [matches, setMatches] = useState(false);
@@ -52,12 +54,18 @@ const ProfileCard = ({ name, email, pfp }) => {
   );
 };
 
-export function ChatCard({ icon, title, href, sourceId }) {
+export function ChatCard({ icon, title, href, sourceId, type }) {
   const router = useRouter();
+  let link = "";
+  if (type === "large") {
+    link = `/chats/largeFile/${href}`;
+  } else {
+    link = `/chats/${href}/${sourceId}`;
+  }
   return (
     <div
       className="p-3 gap-3 flex items-center rounded-xl my-2 cursor-pointer hover:bg-light-bg transition"
-      onClick={() => router.push(`/chats/${href}/${sourceId}`)}
+      onClick={() => router.push(link)}
     >
       <Image src={icon} width={24} height={24} className="" />
       <p className="text-[16px] tracking-wide text-white">{title}</p>
@@ -113,9 +121,11 @@ const Sidebar = () => {
   const [file, setFile] = useState(null);
   const [sourceId, setSourceId] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sum, setSum] = useState(null);
+  const [summary, setSummary] = useState(null);
   const [icon, setIcon] = useState("/upload.svg");
   const [userChats, setUserChats] = useState([]);
+
+  const { toast } = useToast();
 
   useEffect(() => {
     if (user.user) {
@@ -132,34 +142,81 @@ const Sidebar = () => {
     setLoading(true);
     const file = e.target.files[0];
     setFile(file);
-    if (file.size > 20 * 1024 * 1024) {
-      const result = await geminiApiCall(file);
-      setSum(result);
-    } else {
-      const sId = await apiCall(file);
-      setSourceId(sId);
-      console.log("Source ID:", sId);
-    }
+    try {
+      if (file.size > 20 * 1024 * 1024) {
+        toast({
+          title: "Large File Detected: Upload may take some time",
+          description: "Please be patient while we process your file",
+          className: "bg-yellow-500 text-white",
+        });
+        const result = await geminiApiCall(file);
+        setSummary(result);
+      } else {
+        const sId = await apiCall(file);
+        setSourceId(sId);
+        console.log("Source ID:", sId);
+      }
 
-    const ext = getFileExtension(file?.name);
-    setIcon(extensions[ext] || "/upload.svg");
-    handleChat();
+      const ext = getFileExtension(file?.name);
+      setIcon(extensions[ext] || "/upload.svg");
+      toast({
+        title: "File Uploaded",
+        description: "File uploaded successfully",
+        className: "bg-green-500 text-white",
+      });
+      handleChat(file);
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast({
+        title: "Error",
+        description: "Error uploading file",
+        className: "bg-red-500 text-white",
+      });
+    }
+    setLoading(false);
   };
 
-  const handleChat = async () => {
+  const handleChat = async (file) => {
+    console.log("Creating chat...");
+    console.log("File: " , file);
     try {
-      const newChatRef = await createChat(user.user.id, file.name, sum); // Pass the summary to createChat
-      const downloadURL = await uploadDocument(file, newChatRef.id);
+      const existingChat = await checkExistingChat(user.id, file.name);
+      if (existingChat) {
+        toast({
+          title: "Chat Exists",
+          description: "Chat already exists",
+          className: "bg-yellow-500 text-white",
+        });
+        router.push(`/chats/${existingChat}/${sourceId}`);
+        return;
+      }
+      setLoading(true);
+      const type = file.size > 20 * 1024 * 1024 ? "large" : "small";
+      const newChatRef = await createChat(
+        user.id,
+        file.name,
+        summary,
+        sourceId,
+        type
+      );
+      toast({
+        title: "Chat Created",
+        description: "Chat created successfully",
+        className: "bg-green-500",
+      });
 
       if (file.size > 20 * 1024 * 1024) {
         router.push(`/chats/largeFile/${newChatRef.id}`);
       } else {
         router.push(`/chats/${newChatRef.id}/${sourceId}`);
       }
-      setLoading(false);
     } catch (error) {
-      console.error("Error uploading file and creating chat:", error);
-      setLoading(false);
+      console.error("Error creating chat:", error);
+      toast({
+        title: "Error",
+        description: "Error creating chat",
+        className: "bg-red-500 text-white",
+      });
     }
   };
 
@@ -170,7 +227,7 @@ const Sidebar = () => {
   return (
     <>
       {!isMobile ? (
-        <aside className="bg-bg text-white w-[350px] h-[100vh] p-4 spacing-y-2 flex flex-col justify-start">
+        <aside className="bg-bg text-white w-[350px] h-[100vh] p-4 spacing-y-2 flex flex-col justify-start overflow-y-auto">
           <SignedIn>
             <ProfileCard
               name={user?.user?.fullName}
@@ -219,7 +276,7 @@ const Sidebar = () => {
           <SignedIn>
             <div className="my-5">
               <h2 className="text-lg text-white font-primary">Chats</h2>
-              {userChats.slice(0, 3).map((chat) => {
+              {userChats.slice(0, 9).map((chat) => {
                 const getDocIcon = (chat) => {
                   const ext = getFileExtension(chat.title);
                   return extensions[ext] || "/pdf-icon.svg";
@@ -231,6 +288,7 @@ const Sidebar = () => {
                     title={chat.title}
                     href={chat.id}
                     sourceId={chat.sourceId}
+                    type={chat.type}
                   />
                 );
               })}
@@ -293,7 +351,7 @@ const Sidebar = () => {
             <div className="my-5">
               <SignedIn>
                 <h2 className="text-lg text-white font-primary">Chats</h2>
-                {userChats.slice(0, 3).map((chat) => {
+                {userChats.slice(0, 5).map((chat) => {
                   const getDocIcon = (chat) => {
                     const ext = getFileExtension(chat.title);
                     return extensions[ext] || "/pdf-icon.svg";
