@@ -96,14 +96,6 @@ const options = [
     title: "Clear all conversations",
     icon: <DeleteIcon size={24} className="text-white" />,
   },
-  {
-    title: "Settings",
-    icon: <SettingsIcon size={24} className="text-white" />,
-  },
-  {
-    title: "Help",
-    icon: <HelpCircleIcon size={24} className="text-white" />,
-  },
 ];
 
 function Loader() {
@@ -156,7 +148,7 @@ const Sidebar = () => {
       };
       getChats();
     }
-  }, [user.user]);
+  }, [user.user , loading]);
 
   const handleFileUpload = async (e) => {
     setLoading(true);
@@ -249,6 +241,12 @@ const Sidebar = () => {
     router.push(link); // Navigate to the link
   };
 
+  const [visibleChats, setVisibleChats] = useState(3);
+
+  const loadMoreChats = () => {
+    setVisibleChats((prev) => prev + 3); // Show 3 more chats when clicked
+  };
+
   return (
     <>
       {!isMobile ? (
@@ -301,7 +299,7 @@ const Sidebar = () => {
           <SignedIn>
             <div className="my-5">
               <h2 className="text-lg text-white font-primary">Chats</h2>
-              {userChats.slice(0, 9).map((chat) => {
+              {userChats.slice(0, visibleChats).map((chat) => {
                 const getDocIcon = (chat) => {
                   const ext = getFileExtension(chat.title);
                   return extensions[ext] || "/pdf-icon.svg";
@@ -310,13 +308,25 @@ const Sidebar = () => {
                   <ChatCard
                     key={chat.title}
                     icon={getDocIcon(chat)}
-                    title={chat.title}
+                    title={
+                      chat.title.length > 10
+                        ? `${chat.title.slice(0, 10)}...`
+                        : chat.title
+                    }
                     href={chat.id}
                     sourceId={chat.sourceId}
                     type={chat.type}
                   />
                 );
               })}
+              {visibleChats < userChats.length && (
+                <button
+                  onClick={loadMoreChats}
+                  className="mt-2 text-blue-500 hover:underline"
+                >
+                  Load More Chats
+                </button>
+              )}
             </div>
           </SignedIn>
           <SignedOut>
@@ -378,28 +388,37 @@ const Sidebar = () => {
             </SignedOut>
             <div className="my-5">
               <SignedIn>
-                <h2 className="text-lg text-white font-primary">Chats</h2>
-                {userChats.slice(0, 5).map((chat) => {
-                  const getDocIcon = (chat) => {
-                    const ext = getFileExtension(chat.title);
-                    return extensions[ext] || "/pdf-icon.svg";
-                  };
-                  return (
-                    <ChatCard
-                      key={chat.title}
-                      icon={getDocIcon(chat)}
-                      title={chat.title}
-                      href={chat.id}
-                      sourceId={chat.sourceId}
-                      type={chat.type}
-                      onClick={() =>
-                        handleSidebarItemClick(
-                          `/chats/${chat.id}/${chat.sourceId}`
-                        )
-                      }
-                    />
-                  );
-                })}
+                <div className="my-5">
+                  <h2 className="text-lg text-white font-primary">Chats</h2>
+                  {userChats.slice(0, visibleChats).map((chat) => {
+                    const getDocIcon = (chat) => {
+                      const ext = getFileExtension(chat.title);
+                      return extensions[ext] || "/pdf-icon.svg";
+                    };
+                    return (
+                      <ChatCard
+                        key={chat.title}
+                        icon={getDocIcon(chat)}
+                        title={
+                          chat.title.length > 10
+                            ? `${chat.title.slice(0, 10)}...`
+                            : chat.title
+                        }
+                        href={chat.id}
+                        sourceId={chat.sourceId}
+                        type={chat.type}
+                      />
+                    );
+                  })}
+                  {visibleChats < userChats.length && (
+                    <button
+                      onClick={loadMoreChats}
+                      className="mt-2 text-blue-500 hover:underline"
+                    >
+                      Load More Chats
+                    </button>
+                  )}
+                </div>
               </SignedIn>
               <SignedOut>
                 <p className="text-lg text-white">Log in to view chats</p>
