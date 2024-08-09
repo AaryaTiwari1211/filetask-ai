@@ -1,5 +1,13 @@
 "use client";
-import { User, PlusCircleIcon, MenuIcon , HomeIcon , SettingsIcon , DeleteIcon , HelpCircleIcon } from "lucide-react";
+import {
+  User,
+  PlusCircleIcon,
+  MenuIcon,
+  HomeIcon,
+  SettingsIcon,
+  DeleteIcon,
+  HelpCircleIcon,
+} from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -69,10 +77,12 @@ export function ChatCard({ icon, title, href, sourceId, type }) {
     >
       {typeof icon === "string" ? (
         <Image src={icon} width={24} height={24} alt={`${title} icon`} />
-      ):(
+      ) : (
         icon
       )}
-      <p className="text-[16px] tracking-wide text-white">{title}</p>
+      <p className="text-[16px] tracking-wide text-white">
+        {title.length > 10 ? `${title.substring(0, 15)}...` : title}
+      </p>
     </div>
   );
 }
@@ -382,7 +392,11 @@ const Sidebar = () => {
                       href={chat.id}
                       sourceId={chat.sourceId}
                       type={chat.type}
-                      onClick={() => handleSidebarItemClick(`/chats/${chat.id}/${chat.sourceId}`)}
+                      onClick={() =>
+                        handleSidebarItemClick(
+                          `/chats/${chat.id}/${chat.sourceId}`
+                        )
+                      }
                     />
                   );
                 })}
@@ -422,4 +436,3 @@ const Sidebar = () => {
 };
 
 export default Sidebar;
-
