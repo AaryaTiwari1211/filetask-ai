@@ -22,8 +22,8 @@ export const ChatBubble = ({ sender, message }) => {
       <div
         className={`p-3 rounded-lg ${
           isUser
-            ? "bg-gray-400/10 text-white max-w-md"
-            : "bg-blue-800 text-white min-w-[40%] max-w-[60%]"
+            ? "bg-blue-800 text-white max-w-md"
+            : "bg-gray-400/10 text-white min-w-[40%] max-w-[60%]"
         }`}
       >
         {isUser ? (
@@ -69,7 +69,7 @@ export const ChatUI = ({
   return (
     <div className="w-full h-full flex justify-center items-center">
       <div className="w-full h-full flex flex-col items-center justify-center bg-bg">
-        <div className="w-full h-full bg-transparent p-4 flex flex-col">
+        <div className="w-full h-full bg-transparent p-4 flex flex-col lg:m-0 md:m-5">
           <h1 className="text-2xl text-white font-bold px-1 py-3">
             Talking With: {chat.title}
           </h1>

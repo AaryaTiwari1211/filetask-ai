@@ -1,5 +1,5 @@
 "use client";
-import { User, PlusCircleIcon, MenuIcon } from "lucide-react";
+import { User, PlusCircleIcon, MenuIcon , HomeIcon , SettingsIcon , DeleteIcon , HelpCircleIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import { RotatingLines } from "react-loader-spinner";
 import { getChatsByUser } from "@/firebase/utils";
 import { checkExistingChat } from "@/firebase/utils";
 import { useToast } from "@/components/ui/use-toast";
+import Home from "@/app/page";
 
 export const useMediaQuery = (query) => {
   const [matches, setMatches] = useState(false);
@@ -41,14 +42,13 @@ export const useMediaQuery = (query) => {
 
 const ProfileCard = ({ name, email, pfp }) => {
   return (
-    <div className="flex p-4 rounded-xl bg-light-bg items-center gap-3">
+    <div className="flex items-center p-3 justify-between w-full rounded-xl bg-light-bg ">
       <Avatar>
         <AvatarImage src={pfp} alt="@shadcn" />
         <AvatarFallback>CN</AvatarFallback>
       </Avatar>
-      <div className="ml-2">
+      <div className="w-full flex justify-center">
         <p className="text-lg text-white font-primary tracking-wide">{name}</p>
-        <p className="text-sm text-gray-400 tracking-wide">{email}</p>
       </div>
     </div>
   );
@@ -64,10 +64,14 @@ export function ChatCard({ icon, title, href, sourceId, type }) {
   }
   return (
     <div
-      className="p-3 gap-3 flex items-center rounded-xl my-2 cursor-pointer hover:bg-light-bg transition"
+      className="max-w-[300px] p-3 gap-3 flex items-center rounded-xl my-2 cursor-pointer hover:bg-light-bg transition"
       onClick={() => router.push(link)}
     >
-      <Image src={icon} width={24} height={24} className="" />
+      {typeof icon === "string" ? (
+        <Image src={icon} width={24} height={24} alt={`${title} icon`} />
+      ):(
+        icon
+      )}
       <p className="text-[16px] tracking-wide text-white">{title}</p>
     </div>
   );
@@ -75,16 +79,20 @@ export function ChatCard({ icon, title, href, sourceId, type }) {
 
 const options = [
   {
+    title: "Home",
+    icon: <HomeIcon size={24} className="text-white" />,
+  },
+  {
     title: "Clear all conversations",
-    icon: "/trash-icon.svg",
+    icon: <DeleteIcon size={24} className="text-white" />,
   },
   {
     title: "Settings",
-    icon: "/settings.svg",
+    icon: <SettingsIcon size={24} className="text-white" />,
   },
   {
     title: "Help",
-    icon: "/help-ic.svg",
+    icon: <HelpCircleIcon size={24} className="text-white" />,
   },
 ];
 
@@ -124,6 +132,7 @@ const Sidebar = () => {
   const [summary, setSummary] = useState(null);
   const [icon, setIcon] = useState("/upload.svg");
   const [userChats, setUserChats] = useState([]);
+  const [isSheetOpen, setIsSheetOpen] = useState(false); // State to control Sheet
 
   const { toast } = useToast();
 
@@ -131,6 +140,7 @@ const Sidebar = () => {
     if (user.user) {
       const getChats = async () => {
         const chats = await getChatsByUser(user.user.id);
+        chats.sort((a, b) => b.createdAt - a.createdAt);
         setUserChats(chats);
         console.log("Chats:", chats);
       };
@@ -178,7 +188,7 @@ const Sidebar = () => {
 
   const handleChat = async (file) => {
     console.log("Creating chat...");
-    console.log("File: " , file);
+    console.log("File: ", file);
     try {
       const existingChat = await checkExistingChat(user.id, file.name);
       if (existingChat) {
@@ -224,6 +234,11 @@ const Sidebar = () => {
     return filename?.split(".").pop().toLowerCase();
   };
 
+  const handleSidebarItemClick = (link) => {
+    setIsSheetOpen(false); // Close the sidebar
+    router.push(link); // Navigate to the link
+  };
+
   return (
     <>
       {!isMobile ? (
@@ -240,12 +255,12 @@ const Sidebar = () => {
               <CustomButton
                 icon={<User size={24} />}
                 text="Sign In"
-                onClick={() => router.push("/login")}
+                onClick={() => handleSidebarItemClick("/login")}
               />
               <CustomButton
                 icon={<User size={24} />}
                 text="Sign Up"
-                onClick={() => router.push("/signup")}
+                onClick={() => handleSidebarItemClick("/signup")}
               />
             </div>
           </SignedOut>
@@ -295,7 +310,7 @@ const Sidebar = () => {
             </div>
           </SignedIn>
           <SignedOut>
-            <p className="text-lg">Log in to view chats</p>
+            <p className="text-lg text-white">Log in to view chats</p>
           </SignedOut>
           <Separator className="my-4 bg-light-bg p-px" />
           <div className="my-5">
@@ -305,6 +320,8 @@ const Sidebar = () => {
                 key={option.title}
                 icon={option.icon}
                 title={option.title}
+                href={option.link} // Update to use the link
+                onClick={() => handleSidebarItemClick(option.link)} // Handle item click
               />
             ))}
             <SignedIn>
@@ -313,16 +330,17 @@ const Sidebar = () => {
                   icon={<User size={24} />}
                   text="Sign Out"
                   className="w-full bg-red-500 hover:bg-red-700"
+                  onClick={() => handleSidebarItemClick("/logout")} // Handle sign out
                 />
               </SignOutButton>
             </SignedIn>
           </div>
         </aside>
       ) : (
-        <Sheet>
+        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
           <SheetTrigger>
             <MenuIcon
-              size={50}
+              size={30}
               className="absolute top-[10px] left-[10px] text-white lg:m-2 xs:m-0"
             />
           </SheetTrigger>
@@ -339,12 +357,12 @@ const Sidebar = () => {
                 <CustomButton
                   icon={<User size={24} />}
                   text="Sign In"
-                  onClick={() => router.push("/login")}
+                  onClick={() => handleSidebarItemClick("/login")}
                 />
                 <CustomButton
                   icon={<User size={24} />}
                   text="Sign Up"
-                  onClick={() => router.push("/signup")}
+                  onClick={() => handleSidebarItemClick("/signup")}
                 />
               </div>
             </SignedOut>
@@ -363,6 +381,8 @@ const Sidebar = () => {
                       title={chat.title}
                       href={chat.id}
                       sourceId={chat.sourceId}
+                      type={chat.type}
+                      onClick={() => handleSidebarItemClick(`/chats/${chat.id}/${chat.sourceId}`)}
                     />
                   );
                 })}
@@ -379,8 +399,20 @@ const Sidebar = () => {
                   key={option.title}
                   icon={option.icon}
                   title={option.title}
+                  href={option.link}
+                  onClick={() => handleSidebarItemClick(option.link)}
                 />
               ))}
+              <SignedIn>
+                <SignOutButton>
+                  <CustomButton
+                    icon={<User size={24} />}
+                    text="Sign Out"
+                    className="w-full bg-red-500 hover:bg-red-700"
+                    onClick={() => handleSidebarItemClick("/logout")}
+                  />
+                </SignOutButton>
+              </SignedIn>
             </div>
           </SheetContent>
         </Sheet>
@@ -390,3 +422,4 @@ const Sidebar = () => {
 };
 
 export default Sidebar;
+
