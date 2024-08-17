@@ -26,7 +26,7 @@ export const geminiApiCall = async (file) => {
   formData.append("file", file);
 
   try {
-    const result = await axios.post("http://127.0.0.1:8000/upload", formData, {
+    const result = await axios.post("https://filetask-ai.onrender.com/upload", formData, {
       timeout: 1200000000,
       headers: {
         "Content-Type": "multipart/form-data",
@@ -61,7 +61,7 @@ export const SmallPdfChat = async ({ sourceId, newMessage }) => {
 };
 
 export const largePdfChat = async ({ context, prompt }) => {
-  const response = await axios.post("http://127.0.0.1:8000/chat", {
+  const response = await axios.post("https://filetask-ai.onrender.com/chat", {
     context: context,
     prompt: prompt,
   });

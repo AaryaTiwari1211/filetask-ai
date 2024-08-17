@@ -106,7 +106,7 @@ def process_document(file_stream, file_type, token_limit=20000):
         current_tokens = 0
         summary = ""
 
-        for page_text in document_texts:
+        for page_text in document_texts[20:40]:
             if not page_text.strip():
                 continue
             page_tokens = count_tokens(page_text)
