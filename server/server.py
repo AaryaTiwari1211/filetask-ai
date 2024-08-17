@@ -13,11 +13,13 @@ from logging.handlers import RotatingFileHandler
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+
+# Explicitly allowing your frontend domain
+CORS(app, resources={r"/*": {"origins": "https://filetask-ai.vercel.app"}})
 
 @app.after_request
 def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Origin', 'https://filetask-ai.vercel.app')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
     return response
@@ -169,5 +171,5 @@ if __name__ == '__main__':
     handler = RotatingFileHandler('app.log', maxBytes=10000, backupCount=1)
     handler.setLevel(logging.INFO)
     app.logger.addHandler(handler)
-    
+
     app.run(host='0.0.0.0', port=8000, debug=True)
